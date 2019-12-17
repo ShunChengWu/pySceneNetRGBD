@@ -65,7 +65,7 @@ def output(filename, dic):
 def output_name2wnid(filename,dic):
     with open(filename, "a+") as f:
         f.write("\n\n")        
-        f.write("static std::map<std::string, unsigned short> name_to_wnid {\n")
+        f.write("static std::map<std::string, std::string> name_to_wnid {\n")
         for a,b in sorted(dic.items()):    
             f.write("\t{\"%s\", \"%s\"}, \n" % (a, b))
         f.write("};\n")
