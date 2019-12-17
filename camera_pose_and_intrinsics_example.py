@@ -57,8 +57,8 @@ def interpolate_poses(start_pose,end_pose,alpha):
     pose.timestamp = timestamp
     return pose
 
-data_root_path = 'data/val'
-protobuf_path = 'data/scenenet_rgbd_val.pb'
+data_root_path = '/media/sc/SSD1TB/dataset/SceneNetRGBD/SceneNetRGBD-val/val'
+protobuf_path = '/media/sc/SSD1TB/dataset/SceneNetRGBD/scenenet_rgbd_val.pb'
 
 def photo_path_from_view(render_path,view):
     photo_path = os.path.join(render_path,'photo')

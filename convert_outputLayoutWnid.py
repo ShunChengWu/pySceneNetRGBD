@@ -21,6 +21,9 @@ NYU_13_CLASSES = [(0,'Unknown'),
                   (13,'Window')
 ]
 
+WNID_TO_NAME = {'04330267':'Fireplace'
+}
+
 colour_code = np.array([[0, 0, 0],
                        [0, 0, 1],
                        [0.9137,0.3490,0.1882], #BOOKS
@@ -76,69 +79,58 @@ NYU_WNID_TO_CLASS = {
     '02992529':7, '03222722':12, '04373704':4, '02851099':13, '04061681':10, '04529681':7,
 }
 
-data_root_path = 'data/val'
-protobuf_path = 'data/scenenet_rgbd_val.pb'
-data_root_path = '/media/sc/SSD1TB/dataset/SceneNetRGBD/SceneNetRGBD-val/val'
-protobuf_path = '/media/sc/SSD1TB/dataset/SceneNetRGBD/scenenet_rgbd_val.pb'
+test_protobuf_path = '/media/sc/SSD1TB/dataset/SceneNetRGBD/scenenet_rgbd_val.pb'
+train_protobuf_path='/media/sc/SSD1TB/dataset/SceneNetRGBD/train_protobufs'
+output_path = 'scenenet_mat_to_wnid.txt'
 
-def instance_path_from_view(render_path,view):
-    photo_path = os.path.join(render_path,'instance')
-    image_path = os.path.join(photo_path,'{0}.png'.format(view.frame_num))
-    return os.path.join(data_root_path,image_path)
+def process(trajectories, name_wnid_map):          
+    for traj in trajectories.trajectories:
+        for instance in traj.instances:
+            if instance.instance_type == sn.Instance.LAYOUT_OBJECT or instance.instance_type == sn.Instance.LIGHT_OBJECT:
+                if instance.semantic_wordnet_id in NYU_WNID_TO_CLASS:
+                    if not instance.semantic_english in name_wnid_map:
+                        name_wnid_map[instance.semantic_english] = instance.semantic_wordnet_id
+                        print("found! {} {}".format(instance.semantic_english, instance.semantic_wordnet_id))
+                else:
+                    print("found unkonwn wnid {}".format(instance.semantic_wordnet_id))
 
-def save_class_from_instance(instance_path,class_path, class_NYUv2_colourcode_path, mapping):
-    instance_img = np.asarray(Image.open(instance_path))
-    class_img = np.zeros(instance_img.shape)
-    h,w  = instance_img.shape
-
-    class_img_rgb = np.zeros((h,w,3),dtype=np.uint8)
-    r = class_img_rgb[:,:,0]
-    g = class_img_rgb[:,:,1]
-    b = class_img_rgb[:,:,2]
     
-    print(instance_img)
-
-    for instance, semantic_class in mapping.items():
-        class_img[instance_img == instance] = semantic_class
-        r[instance_img==instance] = np.uint8(colour_code[semantic_class][0]*255)
-        g[instance_img==instance] = np.uint8(colour_code[semantic_class][1]*255)
-        b[instance_img==instance] = np.uint8(colour_code[semantic_class][2]*255)
-
-    class_img_rgb[:,:,0] = r
-    class_img_rgb[:,:,1] = g
-    class_img_rgb[:,:,2] = b
-
-    class_img = Image.fromarray(np.uint8(class_img))
-    class_img_rgb = Image.fromarray(class_img_rgb)
-    class_img.save(class_path)
-    class_img_rgb.save(class_NYUv2_colourcode_path)
 
 if __name__ == '__main__':
+    name_wnid_map = {}
+#    englishNames={}
+    # Try to find previous map
+    try:
+        with open(output_path) as f:
+            for line in f:
+               (key, val) = line.split()
+               name_wnid_map[key] = val
+    except IOError: 
+       print('No previous file found.{}'.format(output_path))
+    
     trajectories = sn.Trajectories()
     try:
-        with open(protobuf_path,'rb') as f:
+        with open(test_protobuf_path,'rb') as f:
             trajectories.ParseFromString(f.read())
     except IOError:
-        print('Scenenet protobuf data not found at location:{0}'.format(data_root_path))
         print('Please ensure you have copied the pb file to the data directory')
 
-    traj = random.choice(trajectories.trajectories)
-    instance_class_map = {}
-    for instance in traj.instances:
-
-        instance_type = sn.Instance.InstanceType.Name(instance.instance_type)
-        
-        if instance.instance_type != sn.Instance.BACKGROUND:
-            instance.PrintDebugInfo()
-            print("instance_type: {}, name: {}, NYU label:{}".format(instance_type, instance.semantic_english,NYU_13_CLASSES[NYU_WNID_TO_CLASS[instance.semantic_wordnet_id]]))
-            instance_class_map[instance.instance_id] = NYU_WNID_TO_CLASS[instance.semantic_wordnet_id]
-
-    for view in traj.views:
-
-        instance_path = instance_path_from_view(traj.render_path,view)
-        print('Converting instance image:{0} to class image'.format(instance_path))
-
-        save_class_from_instance(instance_path,'semantic_class.png','NYUv2.png',instance_class_map)
-        print('Breaking early and writing class to semantic_class.png')
-
-        break
+    process(trajectories, name_wnid_map)
+#    print(len(name_wnid_map))
+    
+    for file in os.listdir(train_protobuf_path):
+        if file.endswith(".pb"):
+            print(os.path.join(train_protobuf_path, file))
+            trajectories = sn.Trajectories()
+            try:
+                with open(test_protobuf_path,'rb') as f:
+                    trajectories.ParseFromString(f.read())
+            except IOError:
+                print('Please ensure you have copied the pb file to the data directory')
+            process(trajectories, name_wnid_map)            
+            
+         
+    # Save
+    with open(output_path, 'w+') as file:
+        for key, value in name_wnid_map.items():
+            file.write("%s %s\n" % (key, value))

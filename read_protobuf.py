@@ -1,8 +1,8 @@
 import scenenet_pb2 as sn
 import os
 
-data_root_path = 'data/val'
-protobuf_path = 'data/scenenet_rgbd_val.pb'
+data_root_path = '/media/sc/SSD1TB/dataset/SceneNet/val'
+protobuf_path = '/media/sc/SSD1TB/dataset/SceneNet/scenenet_rgbd_val.pb'
 
 # These functions produce a file path (on Linux systems) to the image given
 # a view and render path from a trajectory.  As long the data_root_path to the
@@ -66,6 +66,7 @@ if __name__ == '__main__':
                 print('Object info:{0}'.format(instance.object_info))
             print('-'*20)
             print('')
+        
         print('Render path:{0}'.format(traj.render_path))
         '''
         The views attribute of trajectories contains all of the information
